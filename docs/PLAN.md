@@ -81,10 +81,12 @@ Celular / PC personal ──(Tailscale o Cloudflare Access + HTTPS)──► Cad
 - Postgres solo en la red interna de Docker o en `127.0.0.1`; nunca publicado en la IP pública. Volumen persistente + backup diario cifrado (y snapshot de DigitalOcean como respaldo adicional).
 - Cloud Firewall de DigitalOcean delante: solo 443 (y SSH restringido a la tailnet o a una IP).
 
-## Decisión abierta: dónde corre n8n
-La instancia de n8n conectada a esta sesión ya tiene 100+ flujos (proyecto PAS360) y no se toca.
-- **Opción A (recomendada): n8n propio en el Droplet** para este proyecto. Permite *Execute Command* y hablar con los runners y con Postgres por red interna, sin exponer nada. La instancia actual se sigue usando para construir y probar.
-- **Opción B: usar la instancia actual (probablemente alojada).** Los nodos de ejecución de comandos suelen no estar disponibles, y n8n no alcanzaría el Postgres ni los runners sin exponerlos. Solo viable con un diseño de *pull*: el runner del VPS consulta a n8n (sin puertos entrantes).
+## n8n: decisión tomada
+n8n corre en el Droplet (Docker) y es la misma instancia que usa el conector de esta sesión. Ya tiene 100+ flujos (proyecto PAS360) que no se tocan; los flujos nuevos llevan prefijo `ASIST -` y se crean sin publicar.
+- El nodo *Execute Command* no está disponible en esta instancia (probablemente excluido por defecto en n8n 2.x). Existe el nodo *SSH*, pero daría a n8n acceso de shell al host: se descarta.
+- **Diseño elegido:** un servicio *runner* (contenedor propio, API HTTP mínima autenticada) que envuelve `claude -p` y `codex exec`. Escucha solo en la red interna de Docker; n8n lo llama con el nodo *HTTP Request*. No se publica ningún puerto nuevo.
+- Como el conector MCP alcanza n8n desde fuera, n8n queda accesible por internet: protegerlo con HTTPS, 2FA/owner fuerte y webhooks con header secreto. Un acceso solo-Tailscale a n8n cortaría el conector.
+- Pendiente: ver cómo está desplegado n8n hoy (compose, red, ubicación del Postgres existente) para integrar sin romper PAS360.
 
 ## Herramientas y skills de apoyo
 - n8n MCP (conectado en esta sesión) para crear, validar y probar workflows.
