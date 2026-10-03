@@ -76,7 +76,19 @@ Celular / PC personal ──(Tailscale o Cloudflare Access + HTTPS)──► Cad
 | Inyección de comandos/prompts | Prompt por stdin, herramientas mínimas, contenedor aislado |
 | Compromiso del VPS | Hardening, backups cifrados, secretos fuera del repo |
 
+## Infraestructura (DigitalOcean, Droplet con Docker)
+- PostgreSQL corre como contenedor en el mismo Droplet, creado desde la consola web del Droplet con `docker compose` (archivos en `infra/`).
+- Postgres solo en la red interna de Docker o en `127.0.0.1`; nunca publicado en la IP pública. Volumen persistente + backup diario cifrado (y snapshot de DigitalOcean como respaldo adicional).
+- Cloud Firewall de DigitalOcean delante: solo 443 (y SSH restringido a la tailnet o a una IP).
+
+## Decisión abierta: dónde corre n8n
+La instancia de n8n conectada a esta sesión ya tiene 100+ flujos (proyecto PAS360) y no se toca.
+- **Opción A (recomendada): n8n propio en el Droplet** para este proyecto. Permite *Execute Command* y hablar con los runners y con Postgres por red interna, sin exponer nada. La instancia actual se sigue usando para construir y probar.
+- **Opción B: usar la instancia actual (probablemente alojada).** Los nodos de ejecución de comandos suelen no estar disponibles, y n8n no alcanzaría el Postgres ni los runners sin exponerlos. Solo viable con un diseño de *pull*: el runner del VPS consulta a n8n (sin puertos entrantes).
+
 ## Herramientas y skills de apoyo
-- n8n MCP (conectado en esta sesión) y [czlonkowski/n8n-skills](https://github.com/czlonkowski/n8n-skills) / [n8n-mcp](https://github.com/czlonkowski/n8n-mcp) para construir y validar workflows.
+- n8n MCP (conectado en esta sesión) para crear, validar y probar workflows.
+- Skills instaladas en `.claude/skills/` (revisadas; sin hooks ni scripts de red): del repo [czlonkowski/n8n-skills](https://github.com/czlonkowski/n8n-skills) — `n8n-agents`, `n8n-binary-and-data`, `n8n-code-javascript`, `n8n-code-python`, `n8n-code-tool`, `n8n-error-handling`, `n8n-expression-syntax`, `n8n-node-configuration`, `n8n-self-hosting`, `n8n-subworkflows`, `n8n-validation-expert`, `n8n-workflow-patterns`; y `webapp-testing` de [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills). Licencias en `docs/third-party/`.
+- No instaladas a propósito: las skills de n8n que dependen de los nombres de herramientas de [n8n-mcp](https://github.com/czlonkowski/n8n-mcp) (`n8n-mcp-tools-expert`, `n8n-multi-instance`, `using-n8n-mcp-skills`) y los *hooks* del plugin, porque nuestro conector oficial usa otras herramientas. `n8n-mcp` puede añadirse más adelante si se instala n8n en el Droplet.
+- [travisvn/awesome-claude-skills](https://github.com/travisvn/awesome-claude-skills) y ComposioHQ son catálogos de enlaces: se consultan cuando haga falta, no se instalan completos.
 - Skills integradas: `security-review`, `code-review`, `simplify`, `claude-api` (solo si más adelante se usa la API).
-- Docker y `psql` disponibles en el entorno de desarrollo; el VPS se configura con los archivos de `infra/`.
