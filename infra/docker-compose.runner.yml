@@ -1,0 +1,34 @@
+# Overlay: añade el runner a la red donde ya corre n8n.
+# Uso (desde infra/):
+#   N8N_NETWORK=<red-de-n8n> RUNNER_TOKEN=<token> docker compose -f docker-compose.runner.yml up -d --build
+services:
+  asist-runner:
+    build: ../runner
+    image: asist-runner:local
+    container_name: asist-runner
+    restart: unless-stopped
+    environment:
+      RUNNER_TOKEN: ${RUNNER_TOKEN:?defina RUNNER_TOKEN (mínimo 32 caracteres)}
+    volumes:
+      - asist-codex-home:/home/node/.codex
+    networks:
+      - n8n_net
+    # Sin "ports": solo es alcanzable desde la red interna de Docker.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/node/.cache
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+    pids_limit: 256
+
+networks:
+  n8n_net:
+    external: true
+    name: ${N8N_NETWORK:?defina N8N_NETWORK (ver docker network ls)}
+
+volumes:
+  asist-codex-home:
